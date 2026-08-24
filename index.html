@@ -84,9 +84,13 @@ data-derived nibble codec → same transformer).</figcaption>
 <img class="chart" src="assets/horizon_decay.png" alt="exactness vs horizon">
 <figcaption>Where exactness fails, the cause is measured, not guessed: the decay
 ranking is exactly the exogenous-randomness ranking. 97.7% of all Craftax error
-mass sits on private-RNG mob slots — the model fits their <i>distribution</i>
-(NLL says so) but argmax cannot beat dice. Asterix/Seaquest share the disease
-(random entity spawns).</figcaption>
+mass sits on private-RNG mob slots. Distributional scoring (fp32 — bf16 poisons
+NLL, a caught-and-fixed instrument bug) adds nuance: <i>frequent</i> stochastic
+events are near-calibrated (Craftax mob walks, NLL ≈ walk entropy at 0.18/nib) but
+<i>rare</i> events are sharply overconfident — Snake's fruit respawn costs ~9.4
+nats/event, worse than uniform, so K-sample rollouts cannot recover the env
+distribution. Calibration tracks event frequency in the corpus; treating that is an
+open arm (event upsampling / event-conditional heads).</figcaption>
 </figure>
 </div>
 
