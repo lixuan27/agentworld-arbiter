@@ -54,8 +54,10 @@ predicted state bit-for-bit identical to the ground truth? (Frozen-state floor i
 <table>
 <tr><th>environment</th><th>state scalars</th><th>teacher-forced</th><th>H=1</th><th>H=4</th><th>H=16</th><th>H=64</th></tr>
 <tr><td>Freeway (MinAtar)</td><td>36</td><td>0.999</td><td>1.000</td><td>1.000</td><td>1.000</td><td class="hero">0.953</td></tr>
-<tr><td>Breakout (MinAtar)</td><td>109</td><td>0.999</td><td class="hero">1.000</td><td>1.000</td><td>0.984</td><td>0.672</td></tr>
+<tr><td>Snake (jumanji, MASS's domain family)</td><td>444</td><td>0.945</td><td>0.969</td><td>0.938</td><td>0.906</td><td class="hero">0.828</td></tr>
+<tr><td>Breakout (MinAtar)</td><td>109</td><td>0.999</td><td class="hero">1.000</td><td>1.000</td><td>0.984</td><td>0.672 (H=32; episodes end sooner)</td></tr>
 <tr><td>SpaceInvaders (MinAtar)</td><td>312</td><td>0.959</td><td>0.938</td><td>0.859</td><td>0.703</td><td>0.188</td></tr>
+<tr><td>Seaquest (MinAtar, 5×100-slot entity tables)</td><td>1919</td><td>0.932</td><td>0.906</td><td>0.672</td><td>0.141</td><td>0.000</td></tr>
 <tr><td>Asterix (MinAtar)</td><td>51</td><td>0.897</td><td>0.844</td><td>0.531</td><td>0.000</td><td>0.000</td></tr>
 <tr><td>Craftax-Classic (2D Minecraft)</td><td>~450</td><td>0.109</td><td>0.219</td><td>0.094*</td><td>—</td><td>map 0.547 vs floor 0.250</td></tr>
 <tr><td>Craftax Full (9 floors)</td><td>84,033</td><td>0.204</td><td>0.234</td><td>0.094</td><td>—</td><td>changed-scalar acc 0.42</td></tr>
