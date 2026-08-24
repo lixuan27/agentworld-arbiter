@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARBITER — typed-state world models across 21 environments</title>
+<style>
+  :root{--bg:#0b0d13;--panel:#141823;--edge:#262d3f;--ink:#d6dae4;--dim:#8a90a2;
+        --gold:#ffc478;--ok:#78fa96;--red:#ff5566;--blue:#55aaff}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1100px 500px at 70% -10%,#171c2c 0%,var(--bg) 60%);
+       color:var(--ink);font:15px/1.6 "SF Mono","JetBrains Mono",Consolas,monospace;
+       max-width:1060px;margin:0 auto;padding:28px 18px 60px}
+  h1{font-size:26px;margin-bottom:4px}h1 b{color:var(--gold)}
+  h2{font-size:15px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;
+     margin:38px 0 10px;border-bottom:1px solid var(--edge);padding-bottom:6px}
+  p{color:var(--ink);margin:10px 0;max-width:900px}
+  .dim{color:var(--dim)}.sub{color:var(--dim);font-size:13px;margin-bottom:18px}
+  table{border-collapse:collapse;margin:12px 0;font-size:13px;width:100%;overflow-x:auto;display:block}
+  th,td{border:1px solid var(--edge);padding:6px 10px;text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{background:var(--panel);color:var(--gold)}
+  tr:nth-child(even) td{background:rgba(20,24,35,.5)}
+  .hero{color:var(--ok);font-weight:700}
+  img{max-width:100%;border-radius:8px;border:1px solid var(--edge);
+      image-rendering:pixelated;display:block;margin:10px 0}
+  img.chart{image-rendering:auto}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:800px){.grid2{grid-template-columns:1fr}}
+  figcaption{font-size:12px;color:var(--dim);margin:-4px 0 14px}
+  code{background:#20263a;padding:1px 6px;border-radius:4px;font-size:13px}
+  a{color:var(--blue)}
+</style>
+</head>
+<body>
+<h1><b>ARBITER</b> — world models that predict the game state, not the pixels</h1>
+<div class="sub">One 5–6M-parameter causal Transformer, one 20-token vocabulary, 21 environments.
+Every metric ships with its do-nothing floor. Predicted states are never repaired —
+illegality is the thing we measure.</div>
+
+<p>The claim under test: predicting the engine's <i>authoritative typed state</i>
+(entity positions, health, inventory, terrain cells) — instead of rendering pixels —
+buys long-horizon consistency, planning, population-scalable multi-view rendering and
+a measurable notion of <i>joint</i> correctness. The starting point is MASS
+(arXiv 2608.06257), whose per-record factorisation is a mean-field approximation that
+breaks exactly on contested outcomes; we add a dial from mean-field to fully joint
+decoding (C1), a Joint Contradiction Rate that counts cross-record impossibilities
+(JCR), and sampled exogenous randomness (C5).</p>
+
+<h2>Fully autoregressive rollout — full-state EXACT match</h2>
+<p>Feed the model its own predictions for 64 steps and ask: is the <i>entire</i>
+predicted state bit-for-bit identical to the ground truth? (Frozen-state floor is
+0.00 everywhere below.)</p>
+<table>
+<tr><th>environment</th><th>state scalars</th><th>teacher-forced</th><th>H=1</th><th>H=4</th><th>H=16</th><th>H=64</th></tr>
+<tr><td>Freeway (MinAtar)</td><td>36</td><td>0.999</td><td>1.000</td><td>1.000</td><td>1.000</td><td class="hero">0.953</td></tr>
+<tr><td>Breakout (MinAtar)</td><td>109</td><td>0.999</td><td class="hero">1.000</td><td>1.000</td><td>0.984</td><td>0.672</td></tr>
+<tr><td>SpaceInvaders (MinAtar)</td><td>312</td><td>0.959</td><td>0.938</td><td>0.859</td><td>0.703</td><td>0.188</td></tr>
+<tr><td>Asterix (MinAtar)</td><td>51</td><td>0.897</td><td>0.844</td><td>0.531</td><td>0.000</td><td>0.000</td></tr>
+<tr><td>Craftax-Classic (2D Minecraft)</td><td>~450</td><td>0.109</td><td>0.219</td><td>0.094*</td><td>—</td><td>map 0.547 vs floor 0.250</td></tr>
+<tr><td>Craftax Full (9 floors)</td><td>84,033</td><td>0.204</td><td>0.234</td><td>0.094</td><td>—</td><td>changed-scalar acc 0.42</td></tr>
+</table>
+<figure>
+<img class="chart" src="assets/minatar.png" alt="MinAtar rollout exactness">
+<figcaption>Where exactness fails, the cause is measured, not guessed: 97.7% of all
+Craftax error mass sits on mob slots driven by the environment's private RNG — the
+model has fit their <i>distribution</i> (NLL says so) but argmax cannot beat dice.
+Asterix has the same disease (random entity spawns).</figcaption>
+</figure>
+
+<h2>Planning inside the model (2D-Minecraft tasks)</h2>
+<p>CEM search scored <i>entirely by model rollouts</i>, one committed plan executed in
+the real environment, preregistered protocol, n=64 starts. The committed plan earns
+<span class="hero">5.4×</span> the commitment-matched random floor; deep two-tree plans
+are found in <span class="hero">9/48</span> fresh starts vs <b>0/48</b> for both random
+floors (Fisher p≈0.003) — at parity with an oracle that burns 24 real-env rollouts per
+start while the model uses zero. On sparse tasks (find water, place table) model
+planning is the <i>only</i> thing that works (both floors 0/24); on dense-opportunity
+tasks selection floors win — commitment vs selection is modulated by opportunity
+density. The model's optimism gap (believes +2.4, delivers +0.7) is bias, not
+variance: dispersion penalties provably don't move it.</p>
+
+<h2>Population scalability, measured to N=1024</h2>
+<figure>
+<img class="chart" src="assets/popscale.png" alt="latency vs population">
+<figcaption>Khora (arXiv 2608.08600) headline-measures per-view rendering flat to
+N=64 and projects beyond; our per-view render is flat 5–7 ms measured to N=1024.
+Model decode scales with world <i>area</i> (paint-chunk records), not population.
+Mid-rollout agent removal/re-entry adds zero excess joint contradictions
+(paired-control verdict).</figcaption>
+</figure>
+
+<h2>Multi-view consistency from one shared state</h2>
+<p>Every camera renders from the same predicted typed state, so quality cannot degrade
+with view count — measured: PSNR 28.5 / 28.4 / 29.2 at 2 / 4 / 8 synchronized views.
+Because our state is explicit we can split the error Khora cannot: the learned
+renderer is near-transparent (LPIPS 0.006 on true states); ~95% of perceptual error is
+dynamics drift.</p>
+<div class="grid2">
+<figure>
+<img src="assets/skirmish_mosaic_3x3.gif" alt="8 synchronized cameras">
+<figcaption>Eight first-person cameras rendered from ONE shared predicted state
+(SkirmishCTF, slide physics). Watch the red paint territory stay consistent across
+views.</figcaption>
+</figure>
+<figure>
+<img src="assets/ep68_t40_argmax.gif" alt="Craftax truth vs model">
+<figcaption>Craftax-Classic: left = ground truth, right = model rollout, both drawn by
+the <i>unmodified official</i> pixel renderer. Player position and terrain stay
+bit-exact for 61 of 64 steps; the mobs (private-RNG walkers) fork within 1–2 ticks —
+the randomness wall made visible.</figcaption>
+</figure>
+<figure>
+<img src="assets/ep75_t40_argmax.gif" alt="Craftax episode 75">
+<figcaption>Another held-out episode (43 steps exact). Facing direction never diverged
+in any episode.</figcaption>
+</figure>
+<figure>
+<img src="assets/ep68_t40_sample.gif" alt="sampled exogenous">
+<figcaption>C5 mode: mob fields <i>sampled</i> from the fitted conditional instead of
+argmax — the honest generative rollout.</figcaption>
+</figure>
+</div>
+
+<h2>The dial: mean-field ↔ joint decoding (two-domain verdict)</h2>
+<p>Jointly worded with a parallel DMC/Meta-World effort, on a shared paired-Δ ruler:
+(1) <b>no evidence of long-horizon decay</b> of the dial's benefit with training in
+either domain (0/16 and 1/12 resolved ≈ chance); (2) <b>H=1 is the dial's failure
+point in all three domains</b> — signs differ (DMC positive-shrinking, SMAX/Atari
+stable negative, Atari game-level 9:0, p=0.0039) but teacher-forced CE shows no
+top-rung deficit in either domain (0/8 and 5R/7D p=0.77): the cost lives in
+<i>decode time</i>, not in the fit; (3) H=4 is a transition band.</p>
+
+<h2>Live demo (cluster-internal)</h2>
+<p>Three arenas run continuously: a 10 fps smooth arena (engine-authoritative, the
+model as an async shadow with a live position-agreement meter, pane-delta wire
+protocol at 128 KiB/s), a model-authoritative arena where <i>every tick of the world
+you play in is predicted by the transformer</i> (GPU-compiled decode 136 ms via a
+static-KV CUDA-graph surgery, bit-identical to the eager path), and an Atari RAM
+arcade. Fog of war is wall-occluded team-shared line of sight; movement is sub-cell
+sliding physics with acceleration and diagonals.</p>
+
+<p class="dim" style="margin-top:40px">Everything trained from scratch; no pretrained
+video encoders, no diffusion renderers, no LLMs. Data is public or self-generated.
+Full stage report in <a href="STAGE_REPORT_2026-08-25.md">STAGE_REPORT_2026-08-25.md</a>.
+Generated 2026-08-25.</p>
+</body>
+</html>
