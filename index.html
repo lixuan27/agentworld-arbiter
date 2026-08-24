@@ -85,12 +85,14 @@ data-derived nibble codec → same transformer).</figcaption>
 <figcaption>Where exactness fails, the cause is measured, not guessed: the decay
 ranking is exactly the exogenous-randomness ranking. 97.7% of all Craftax error
 mass sits on private-RNG mob slots. Distributional scoring (fp32 — bf16 poisons
-NLL, a caught-and-fixed instrument bug) adds nuance: <i>frequent</i> stochastic
-events are near-calibrated (Craftax mob walks, NLL ≈ walk entropy at 0.18/nib) but
-<i>rare</i> events are sharply overconfident — Snake's fruit respawn costs ~9.4
-nats/event, worse than uniform, so K-sample rollouts cannot recover the env
-distribution. Calibration tracks event frequency in the corpus; treating that is an
-open arm (event upsampling / event-conditional heads).</figcaption>
+NLL, a caught-and-fixed instrument bug) says the simulators are <i>near-calibrated
+throughout</i>: frequent stochastic events learn better-than-uniform structure
+(Asterix spawns 2.71 vs uniform 4.38 nats/event; Craftax mob walks ≈ walk entropy),
+and rare events settle at uniform-level <i>calibrated ignorance</i> (Snake fruit
+respawn 5.00 ≈ uniform 4.94 — the respawn IS uniform, so this is the ceiling).
+Flat coverage@K is a power phenomenon (8 samples vs a ~140-way uniform event), not
+miscalibration — an earlier overconfidence reading from a 32-start table was
+retracted after the large-sample event split.</figcaption>
 </figure>
 </div>
 
