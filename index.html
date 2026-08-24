@@ -62,13 +62,47 @@ predicted state bit-for-bit identical to the ground truth? (Frozen-state floor i
 <tr><td>Craftax-Classic (2D Minecraft)</td><td>~450</td><td>0.109</td><td>0.219</td><td>0.094*</td><td>—</td><td>map 0.547 vs floor 0.250</td></tr>
 <tr><td>Craftax Full (9 floors)</td><td>84,033</td><td>0.204</td><td>0.234</td><td>0.094</td><td>—</td><td>changed-scalar acc 0.42</td></tr>
 </table>
+<div class="grid2">
 <figure>
 <img class="chart" src="assets/minatar.png" alt="MinAtar rollout exactness">
-<figcaption>Where exactness fails, the cause is measured, not guessed: 97.7% of all
-Craftax error mass sits on mob slots driven by the environment's private RNG — the
-model has fit their <i>distribution</i> (NLL says so) but argmax cannot beat dice.
-Asterix has the same disease (random entity spawns).</figcaption>
+<figcaption>Six new benchmarks through ONE generic pipeline (state leaves →
+data-derived nibble codec → same transformer).</figcaption>
 </figure>
+<figure>
+<img class="chart" src="assets/horizon_decay.png" alt="exactness vs horizon">
+<figcaption>Where exactness fails, the cause is measured, not guessed: the decay
+ranking is exactly the exogenous-randomness ranking. 97.7% of all Craftax error
+mass sits on private-RNG mob slots — the model fits their <i>distribution</i>
+(NLL says so) but argmax cannot beat dice. Asterix/Seaquest share the disease
+(random entity spawns).</figcaption>
+</figure>
+</div>
+
+<h2>Watch the state hold — truth vs model, side by side</h2>
+<div class="grid2">
+<figure>
+<img src="assets/Snake-v1_truth_vs_model.gif" alt="Snake truth vs model">
+<figcaption>Snake (MASS's domain family): left truth, right model, 48 fully
+autoregressive steps with ZERO divergence on this rollout (best of 8 starts —
+a presentation pick; the table numbers are unbiased). Disclosed limitation: the
+random-policy corpus keeps snakes short, so long-body dynamics are
+under-trained; a fruit-seeking corpus is queued.</figcaption>
+</figure>
+<figure>
+<img src="assets/Breakout-MinAtar_truth_vs_model.gif" alt="Breakout truth vs model">
+<figcaption>Breakout: the shown 32-step rollout is bit-exact end to end —
+paddle, ball, bricks, all predicted state.</figcaption>
+</figure>
+<figure>
+<img src="assets/Freeway-MinAtar_truth_vs_model.gif" alt="Freeway truth vs model">
+<figcaption>Freeway: 48 steps, zero divergence (eight cars + chicken).</figcaption>
+</figure>
+<figure>
+<img class="chart" src="assets/dial_trajectory.png" alt="dial trajectory">
+<figcaption>The mean-field↔joint dial across training (SMAX, H=64): benefit
+fluctuates but shows no decay — the two-domain paired-Δ verdict.</figcaption>
+</figure>
+</div>
 
 <h2>Planning inside the model (2D-Minecraft tasks)</h2>
 <p>CEM search scored <i>entirely by model rollouts</i>, one committed plan executed in
