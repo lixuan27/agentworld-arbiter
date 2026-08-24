@@ -38,14 +38,26 @@
 Every metric ships with its do-nothing floor. Predicted states are never repaired —
 illegality is the thing we measure.</div>
 
-<p>The claim under test: predicting the engine's <i>authoritative typed state</i>
-(entity positions, health, inventory, terrain cells) — instead of rendering pixels —
-buys long-horizon consistency, planning, population-scalable multi-view rendering and
-a measurable notion of <i>joint</i> correctness. The starting point is MASS
-(arXiv 2608.06257), whose per-record factorisation is a mean-field approximation that
-breaks exactly on contested outcomes; we add a dial from mean-field to fully joint
-decoding (C1), a Joint Contradiction Rate that counts cross-record impossibilities
-(JCR), and sampled exogenous randomness (C5).</p>
+<p>The question under systematic study: <b>if the engine's <i>authoritative typed
+state</i> is the right interface for world models, can it serve as a unified
+simulation interface — cross-environment, plannable, renderable?</b> The starting
+point is MASS (arXiv 2608.06257), whose per-record factorisation is a mean-field
+approximation that breaks exactly on contested outcomes; we add a dial from
+mean-field to fully joint decoding (C1), a Joint Contradiction Rate that counts
+cross-record impossibilities (JCR), and sampled exogenous randomness (C5).</p>
+
+<p><b>Scope, stated precisely.</b> What the 21 environments validate today is a
+<i>unified pipeline and model design</i> — one architecture, one 20-token
+vocabulary, one metric discipline, per-environment checkpoints. It is <b>not</b> a
+single universal checkpoint mastering all environments at once (that experiment is
+running now). Known boundaries, measured not hidden: Seaquest/Asterix long-horizon
+exactness collapses under random entity spawns (argmax cannot beat dice — the
+distributional evaluation that treats this honestly is being added); Craftax Full's
+upper floors are not yet exercised by data (the corpus policy never descends);
+the mean-field↔joint dial does <b>not</b> follow a simple "more joint is better"
+law (its benefit is horizon- and domain-conditional, and at H=1 it reliably costs);
+population-OOD Skirmish rollouts still produce frequent joint contradictions;
+three-step crafting chains remain at zero planning success.</p>
 
 <h2>Fully autoregressive rollout — full-state EXACT match</h2>
 <p>Feed the model its own predictions for 64 steps and ask: is the <i>entire</i>
