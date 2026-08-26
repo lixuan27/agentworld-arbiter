@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ARBITER — typed-state world models across 21 environments</title>
+<title>ARBITER — typed-state world models: what actually sets the ceiling</title>
 <style>
   :root{--bg:#0b0d13;--panel:#141823;--edge:#262d3f;--ink:#d6dae4;--dim:#8a90a2;
         --gold:#ffc478;--ok:#78fa96;--red:#ff5566;--blue:#55aaff}
@@ -14,6 +14,7 @@
   h1{font-size:26px;margin-bottom:4px}h1 b{color:var(--gold)}
   h2{font-size:15px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;
      margin:38px 0 10px;border-bottom:1px solid var(--edge);padding-bottom:6px}
+  h3{font-size:14px;color:var(--ink);margin:22px 0 6px}
   p{color:var(--ink);margin:10px 0;max-width:900px}
   .dim{color:var(--dim)}.sub{color:var(--dim);font-size:13px;margin-bottom:18px}
   table{border-collapse:collapse;margin:12px 0;font-size:13px;width:100%;overflow-x:auto;display:block}
@@ -22,6 +23,7 @@
   th{background:var(--panel);color:var(--gold)}
   tr:nth-child(even) td{background:rgba(20,24,35,.5)}
   .hero{color:var(--ok);font-weight:700}
+  .bad{color:var(--red);font-weight:700}
   img{max-width:100%;border-radius:8px;border:1px solid var(--edge);
       image-rendering:pixelated;display:block;margin:10px 0}
   img.chart{image-rendering:auto}
@@ -30,173 +32,209 @@
   figcaption{font-size:12px;color:var(--dim);margin:-4px 0 14px}
   code{background:#20263a;padding:1px 6px;border-radius:4px;font-size:13px}
   a{color:var(--blue)}
+  .box{background:var(--panel);border:1px solid var(--edge);border-radius:8px;
+       padding:12px 16px;margin:14px 0}
+  .box.warn{border-color:#5a3a2a}
+  ul{margin:8px 0 8px 22px}li{margin:4px 0}
 </style>
 </head>
 <body>
 <h1><b>ARBITER</b> — world models that predict the game state, not the pixels</h1>
-<div class="sub">One 5–6M-parameter causal Transformer, one 20-token vocabulary, 21 environments.
-Every metric ships with its do-nothing floor. Predicted states are never repaired —
-illegality is the thing we measure.</div>
+<div class="sub">One 5–6M-parameter causal Transformer, one nibble vocabulary, trained from
+scratch. Every ceiling on this page is <b>model-free</b>: measured by branching the real
+simulator, so it does not depend on our training budget, our seeds, or whether anything
+converged. Predicted states are never repaired — illegality is the thing we measure.</div>
 
-<p>The question under systematic study: <b>if the engine's <i>authoritative typed
-state</i> is the right interface for world models, can it serve as a unified
-simulation interface — cross-environment, plannable, renderable?</b> The starting
-point is MASS (arXiv 2608.06257), whose per-record factorisation is a mean-field
-approximation that breaks exactly on contested outcomes; we add a dial from
-mean-field to fully joint decoding (C1), a Joint Contradiction Rate that counts
-cross-record impossibilities (JCR), and sampled exogenous randomness (C5).</p>
+<div class="box">
+<b>The one-line result.</b> The exact-match ceiling of a world model is <b>not a property of
+the environment</b>. It is a property of the <b>behaviour policy that generated the data</b> —
+the same Snake has a ceiling of 1.0000 under one policy and 0.1562 under another, with no
+model or environment change in between. Any exact-match number reported without its
+<code>p_stoch</code> is not comparable to any other.
+</div>
 
-<p><b>Scope, stated precisely.</b> What the 21 environments validate today is a
-<i>unified pipeline and model design</i> — one architecture, one 20-token
-vocabulary, one metric discipline, per-environment checkpoints. It is <b>not</b> a
-single universal checkpoint mastering all environments at once (that experiment is
-running now). Known boundaries, measured not hidden: Seaquest/Asterix long-horizon
-exactness collapses under random entity spawns (argmax cannot beat dice — the
-distributional evaluation that treats this honestly is being added); Craftax Full's
-upper floors are not yet exercised by data (the corpus policy never descends);
-the mean-field↔joint dial does <b>not</b> follow a simple "more joint is better"
-law (its benefit is horizon- and domain-conditional, and at H=1 it reliably costs);
-population-OOD Skirmish rollouts still produce frequent joint contradictions;
-three-step crafting chains remain at zero planning success.</p>
+<h2>1 · The ceiling moves with the policy — in both directions</h2>
+<p>We define a stochastic transition <b>model-free and domain-free</b>: a transition is
+stochastic iff the K real-simulator branches from <code>(S, A)</code> disagree.
+<code>p_stoch</code> is the rate at which a policy walks into such transitions. Freeway is
+the built-in null control — it must read exactly 0 under every policy, and it does.</p>
+<img class="chart" src="assets/f194_policy_ceiling.png" alt="policy-conditional ceiling">
+<figcaption>7 environments × 2 policies. <b>Snake</b> puts its randomness at the <b>goal</b>
+(eating respawns the fruit at a random cell) so competent play <i>raises</i> entropy.
+<b>Breakout</b> puts it at <b>failure</b> (missing the ball) so incompetent play raises it.
+Those are the two poles of the law.</figcaption>
 
-<h2>Fully autoregressive rollout — full-state EXACT match</h2>
-<p>Feed the model its own predictions for 64 steps and ask: is the <i>entire</i>
-predicted state bit-for-bit identical to the ground truth? (Frozen-state floor is
-0.00 everywhere below.)</p>
+<h3>The four classes, all cells measured</h3>
 <table>
-<tr><th>environment</th><th>state scalars</th><th>teacher-forced</th><th>H=1</th><th>H=4</th><th>H=16</th><th>H=64</th></tr>
-<tr><td>Freeway (MinAtar)</td><td>36</td><td>0.999</td><td>1.000</td><td>1.000</td><td>1.000</td><td class="hero">0.953</td></tr>
-<tr><td>Snake (jumanji, MASS's domain family)</td><td>444</td><td>0.945</td><td>0.969</td><td>0.938</td><td>0.906</td><td class="hero">0.828</td></tr>
-<tr><td>Breakout (MinAtar)</td><td>109</td><td>0.999</td><td class="hero">1.000</td><td>1.000</td><td>0.984</td><td>0.672 (H=32; episodes end sooner)</td></tr>
-<tr><td>SpaceInvaders (MinAtar)</td><td>312</td><td>0.959</td><td>0.938</td><td>0.859</td><td>0.703</td><td>0.188</td></tr>
-<tr><td>Seaquest (MinAtar, 5×100-slot entity tables)</td><td>1919</td><td>0.932</td><td>0.906</td><td>0.672</td><td>0.141</td><td>0.000</td></tr>
-<tr><td>Asterix (MinAtar)</td><td>51</td><td>0.897</td><td>0.844</td><td>0.531</td><td>0.000</td><td>0.000</td></tr>
-<tr><td>Craftax-Classic (2D Minecraft)</td><td>~450</td><td>0.109</td><td>0.219</td><td>0.094*</td><td>—</td><td>map 0.547 vs floor 0.250</td></tr>
-<tr><td>Craftax Full (9 floors)</td><td>84,033</td><td>0.204</td><td>0.234</td><td>0.094</td><td>—</td><td>changed-scalar acc 0.42</td></tr>
+<tr><th>class</th><th>p_stoch</th><th>environments</th><th>"the model is deficient" well-posed?</th></tr>
+<tr><td>I deterministic</td><td>identically 0</td><td>Freeway, SpaceInvaders</td><td class="hero">yes — all error is estimation</td></tr>
+<tr><td>II policy-sensitive</td><td>moves, both ways</td><td>Snake (goal-side), Breakout (failure-side)</td><td>only once the policy is stated</td></tr>
+<tr><td>III saturated</td><td>identically 1</td><td>Craftax (6/6 cells; <i>no deterministic transition exists</i>)</td><td class="bad">no</td></tr>
+<tr><td>IV population-driven</td><td>rises to 1 with N</td><td>SkirmishCTF</td><td>only at small N</td></tr>
 </table>
+
+<h2>2 · Multi-agent: exact-match dies by multiplication</h2>
+<img class="chart" src="assets/f203_ctf_population.png" alt="CTF population law">
+<figcaption>SkirmishCTF, our own deterministic snapshot/restore engine (rules from Melting Pot
+<code>paintball__capture_the_flag</code>). Contention is resolved by an exogenous priority
+permutation, so every extra contender adds a coin flip. <b>Left:</b> as live agents go
+5.6 → 20.7, <code>p_stoch</code> saturates at exactly 1.0000 and the whole-state ceiling falls
+0.916 → 0.626. <b>Right:</b> every per-record ceiling stays ≥ 0.98 the whole way. The joint
+collapses because more records must be simultaneously right, not because any record becomes
+unpredictable.</figcaption>
+<p class="dim">Counter-intuitive by-product: the <b>paint/wall_hp grid is where contention
+concentrates</b> — the most common contested outcome in a paintball CTF is two beams painting
+the same cell — yet its ceiling reads 0.9994–1.0000 throughout. Where contention concentrates
+is <i>not</i> where predictability is lost.</p>
+
+<h2>3 · At H=1, no component is weak in any environment</h2>
+<img class="chart" src="assets/f210_group_law.png" alt="per-group law across 7 environments">
+<figcaption>Minimum per-group ceiling-normalised accuracy, over every group of every
+environment. The floor across all 75 groups of all 7 environments is <b>0.9393</b>. On the
+same weights and the same states, <b>whole-state</b> normalised spans 0.00 to 1.00. The
+sharpest single cell: a CTF arm gets <b>zero</b> of 64 whole states exactly right while sitting
+at 98.1–100.2% of ceiling on every record kind.</figcaption>
+
+<h2>4 · …but that law does <span class="bad">not</span> survive over horizon</h2>
 <div class="grid2">
-<figure>
-<img class="chart" src="assets/minatar.png" alt="MinAtar rollout exactness">
-<figcaption>Six new benchmarks through ONE generic pipeline (state leaves →
-data-derived nibble codec → same transformer).</figcaption>
-</figure>
-<figure>
-<img class="chart" src="assets/horizon_decay.png" alt="exactness vs horizon">
-<figcaption>Where exactness fails, the cause is measured, not guessed: the decay
-ranking is exactly the exogenous-randomness ranking. 97.7% of all Craftax error
-mass sits on private-RNG mob slots. Distributional scoring (fp32 — bf16 poisons
-NLL, a caught-and-fixed instrument bug) says the simulators are <i>near-calibrated
-throughout</i>: frequent stochastic events learn better-than-uniform structure
-(Asterix spawns 2.71 vs uniform 4.38 nats/event; Craftax mob walks ≈ walk entropy),
-and rare events settle at uniform-level <i>calibrated ignorance</i> (Snake fruit
-respawn 5.00 ≈ uniform 4.94 — the respawn IS uniform, so this is the ceiling).
-Flat coverage@K is a power phenomenon (8 samples vs a ~140-way uniform event), not
-miscalibration — an earlier overconfidence reading from a 32-start table was
-retracted after the large-sample event split.</figcaption>
-</figure>
+  <img class="chart" src="assets/f211_horizon.png" alt="horizon law">
+  <img class="chart" src="assets/f211_spaceinvaders_groups.png" alt="SpaceInvaders per-group over horizon">
+</div>
+<figcaption>SpaceInvaders is decisive because its ceiling is <b>exactly 1.0000 at every
+horizon</b> (p_stoch = 0), so nothing stochastic can be blamed. At H=4 and H=16 the minimum
+per-group number <b>equals the whole-state number to the digit</b> — meaning every state the
+model gets wrong is wrong because of <b>one group</b>: <code>e_bullet_map</code>, the enemy
+bullet grid. That is the first component-level deficiency this project has found, and it has
+a name. Freeway is the null control and stays at 1.0000 at every horizon.</figcaption>
+
+<h2>5 · Table 1 — Bayes ceiling vs converged model</h2>
+<p class="dim">Ceilings are model-free (K = 64 real-simulator branches, the evaluator's own
+start set). Models are 60k-step specialists. No model exceeds its own ceiling anywhere.</p>
+<table>
+<tr><th>env</th><th>H1 ceil/model/norm</th><th>H4</th><th>H16</th><th>H64</th></tr>
+<tr><td>Freeway</td><td>1.000 / 1.000 / <span class="hero">100%</span></td><td>100%</td><td>100%</td><td>0.985 / 0.953 / 96.8%</td></tr>
+<tr><td>Breakout</td><td>1.000 / 1.000 / <span class="hero">100%</span></td><td>100%</td><td>1.000 / 0.953 / 95.3%</td><td>(H32 0.656)</td></tr>
+<tr><td>Snake</td><td>1.000 / 1.000 / <span class="hero">100%</span></td><td>99.9%</td><td>99.7%</td><td>0.910 / 0.906 / <span class="hero">99.6%</span></td></tr>
+<tr><td>Seaquest</td><td>0.916 / 0.906 / 99.0%</td><td>97.5%</td><td>0.177 / 0.141 / 79.5%</td><td>0.0024 / 0.0 / ⚠</td></tr>
+<tr><td>Asterix</td><td>0.888 / 0.859 / 96.7%</td><td>84.0%</td><td>0.047 / 0.0 / ⚠</td><td>4.5e-6 / 0.0 / ⚠</td></tr>
+<tr><td>SpaceInvaders</td><td>1.000 / 0.984 / 98.4%</td><td>95.3%</td><td>93.8%</td><td>1.000 / 0.781 / <span class="bad">78.1%</span></td></tr>
+</table>
+<p class="dim">⚠ = the ceiling itself is below what 64 starts can resolve (expected successes
+0.15 / 3.0 / 0.0003). That is an instrument floor, not a model failure, and we say so rather
+than reporting "0% of ceiling".</p>
+<p>The largest correction we have made to our own work: SpaceInvaders H64 was once 18.8% and
+was treated as "the worst environment". Retrained to convergence it is <b>78.1%</b> (38 wins,
+0 losses, p &lt; 1e-9). <b>The cause was under-training, not the method.</b></p>
+
+<h2>6 · Planning: near-perfect dynamics buy nothing, and we can say exactly why</h2>
+<img class="chart" src="assets/f191_planning.png" alt="planning arms">
+<figcaption>On Snake, where the model sits at 94.5–100% of its Bayes ceiling, a model-scored
+CEM planner is <b>statistically indistinguishable from random best-of-8</b> and loses 23–0 to a
+three-line greedy heuristic (p &lt; 1e-6). Changing <b>only the CEM prior</b> — training
+nothing — takes it 0.125 → 0.531.</figcaption>
+<p>The chain closes arithmetically, with two independent predictions each landing within a
+point of the measured arms:</p>
+<ul>
+<li>the clean corpus <b>never eats the fruit</b> (0 of 64 twelve-step windows), so the model's
+belief about that event is barely constrained by data;</li>
+<li>the belief is over-predicted <b>5.5×</b> (0.127 vs a true 0.023) — while <b>ranking is
+fine</b> (Spearman +0.712). The broken thing is <b>event calibration</b>, not ranking;</li>
+<li>uniform 12-step sequences reach the fruit only <b>2.3%</b> of the time, so
+<code>1 − 0.977⁶⁴ = 0.774</code> caps even perfect scoring — the oracle arm measured
+<b>0.719</b>;</li>
+<li>the model believes 8.1 of 64 candidates eat while 1.5 truly do, so its argmax should hit a
+real success <code>1.5/8.1 = 0.19</code> of the time — it measured <b>0.125</b>.</li>
+</ul>
+<div class="box">
+<b>Which metric predicts planning utility?</b> Going 15k → 60k on the same corpus, with four of
+five planner arms <b>bit-identical</b>: both exact-match variants barely move (one is saturated
+at 0.97+, the other is pinned by a ceiling and <i>structurally cannot</i>), while scorer regret
+falls <b>42%</b>, event calibration improves 5.5× → 3.3×, and planning success rises
+<b>75% relative</b>. The predictive quantities are <b>scorer-level</b>, not state-accuracy-level.
 </div>
 
-<h2>Watch the state hold — truth vs model, side by side</h2>
+<h2>7 · Rendering and the live server</h2>
 <div class="grid2">
-<figure>
-<img src="assets/Snake-v1_truth_vs_model.gif" alt="Snake truth vs model">
-<figcaption>Snake (MASS's domain family): left truth, right model, 48 fully
-autoregressive steps with ZERO divergence on this rollout (best of 8 starts —
-a presentation pick; the table numbers are unbiased). Disclosed limitation: the
-random-policy corpus keeps snakes short, so long-body dynamics are
-under-trained; a fruit-seeking corpus is queued.</figcaption>
-</figure>
-<figure>
-<img src="assets/Breakout-MinAtar_truth_vs_model.gif" alt="Breakout truth vs model">
-<figcaption>Breakout: the shown 32-step rollout is bit-exact end to end —
-paddle, ball, bricks, all predicted state.</figcaption>
-</figure>
-<figure>
-<img src="assets/Freeway-MinAtar_truth_vs_model.gif" alt="Freeway truth vs model">
-<figcaption>Freeway: 48 steps, zero divergence (eight cars + chicken).</figcaption>
-</figure>
-<figure>
-<img class="chart" src="assets/dial_trajectory.png" alt="dial trajectory">
-<figcaption>The mean-field↔joint dial across training (SMAX, H=64): benefit
-fluctuates but shows no decay — the two-domain paired-Δ verdict.</figcaption>
-</figure>
+  <figure><img src="assets/skirmish_mosaic_3x3.gif" alt="skirmish mosaic">
+  <figcaption>SkirmishCTF rolled out inside the model.</figcaption></figure>
+  <figure><img src="assets/ep68_t40_argmax.gif" alt="craftax rollout">
+  <figcaption>Craftax, argmax decode.</figcaption></figure>
+</div>
+<div class="grid2">
+  <figure><img src="assets/Snake-v1_truth_vs_model.gif" alt="snake truth vs model">
+  <figcaption>Snake — ground truth (left) vs model (right).</figcaption></figure>
+  <figure><img src="assets/Breakout-MinAtar_truth_vs_model.gif" alt="breakout truth vs model">
+  <figcaption>Breakout — ground truth vs model.</figcaption></figure>
+</div>
+<ul>
+<li>~95% of perceptual error comes from the <b>dynamics</b>; the renderer is near-transparent
+(true-state LPIPS <b>0.006</b>).</li>
+<li>Per-view render latency is <b>flat at 5.2–6.9 ms</b> from N = 16 to N = 1024.</li>
+<li>Cross-view consistency: the teacher control is <b>100.00% bit-identical</b>; learned/pred
+and learned/true are statistically indistinguishable, so the prediction layer adds
+<b>≈ 0</b> extra view drift.</li>
+<li>Playing inside the model runs at <b>5.1 fps</b> (static-KV + cudagraphs, 3.99× speedup,
+both configurations bit-identical).</li>
+</ul>
+
+<h2>8 · What we have retracted</h2>
+<div class="box warn">
+<p>We keep a public list because several of these were our own headline numbers.</p>
+<ul>
+<li><b>"4× data lifts SpaceInvaders H64 by +0.1406 (p = 0.0352)"</b> — the baseline was one
+checkpoint-selection draw weaker than it should have been. Against the correct baseline both
+seeds are <b>unresolved</b> (one is exactly 5–5), while the old baseline is itself significantly
+worse than a plain run (p = 0.0225). The entire effect was selection, not data.</li>
+<li><b>"Off-policy actions cost essentially nothing"</b> — that read came from a column that
+<b>excluded terminated starts</b>, which are precisely the ones off-policy actions damage. On the
+ceiling-normalised instrument, degradation is large in 6 of 7 cells.</li>
+<li><b>"Craftax mobs have a 60–87% gap; cows is the weakest cell"</b> — we read the <i>last</i>
+table printed in a log and attributed it to the wrong checkpoint <i>and</i> the wrong decode
+mode. The truth is that all eight groups sit at <b>≥ 0.9477</b>. Every table now carries its
+<code>ckpt</code> and <code>decode</code> in the caption.</li>
+<li><b>"Factorization gap ≤ +0.0103 everywhere"</b> — the correct bound is <b>+0.0113</b>.</li>
+<li><b>"EARC-25% is unresolved"</b> — at convergence it is <b>resolved harmful</b>
+(0 wins, 15 losses, p = 0.0001).</li>
+</ul>
 </div>
 
-<h2>Planning inside the model (2D-Minecraft tasks)</h2>
-<p>CEM search scored <i>entirely by model rollouts</i>, one committed plan executed in
-the real environment, preregistered protocol, n=64 starts. The committed plan earns
-<span class="hero">5.4×</span> the commitment-matched random floor; deep two-tree plans
-are found in <span class="hero">9/48</span> fresh starts vs <b>0/48</b> for both random
-floors (Fisher p≈0.003) — at parity with an oracle that burns 24 real-env rollouts per
-start while the model uses zero. On sparse tasks (find water, place table) model
-planning is the <i>only</i> thing that works (both floors 0/24); on dense-opportunity
-tasks selection floors win — commitment vs selection is modulated by opportunity
-density. The model's optimism gap (believes +2.4, delivers +0.7) is bias, not
-variance: dispersion penalties provably don't move it.</p>
+<h2>9 · Three scaling axes, two now closed</h2>
+<p>SpaceInvaders H64 = 78.1% is the only clean estimation target left: p_stoch is identically 0
+under both policies and the ceiling is exactly 1.0000, so no stochasticity can be blamed.</p>
+<table>
+<tr><th>axis</th><th>verdict</th></tr>
+<tr><td>data (4×)</td><td class="dim">withdrawn — unresolved against the correct baseline</td></tr>
+<tr><td>steps (60k → 120k)</td><td class="bad">resolved HARMFUL — best −0.0938 (0/6, p = 0.0312), last −0.1875 (1/13, p = 0.0018)</td></tr>
+<tr><td>capacity (20M)</td><td>running</td></tr>
+</table>
+<p>And a result worth its own line: across that 120k run the <b>teacher-forced</b> metric read
+0.9893–0.9922 — at or above its 60k values — while the <b>rollout</b> fell significantly. The
+quantity used to <i>select</i> checkpoints moved opposite to the quantity being <i>reported</i>.
+This is the cleanest argument we have for reporting rollout rather than teacher-forced numbers.</p>
 
-<h2>Population scalability, measured to N=1024</h2>
-<figure>
-<img class="chart" src="assets/popscale.png" alt="latency vs population">
-<figcaption>Khora (arXiv 2608.08600) headline-measures per-view rendering flat to
-N=64 and projects beyond; our per-view render is flat 5–7 ms measured to N=1024.
-Model decode scales with world <i>area</i> (paint-chunk records), not population.
-Mid-rollout agent removal/re-entry adds zero excess joint contradictions
-(paired-control verdict).</figcaption>
-</figure>
+<h2>10 · Methodological disciplines (each one was paid for)</h2>
+<ul>
+<li><b>verify-then-write</b> — ranges are measured from data and written into the codec;
+out-of-range raises rather than clipping.</li>
+<li><b>Numerator and denominator must share space <i>and</i> distribution.</b> The strongest
+self-check is "the model exceeds its own ceiling" — that signal caught four separate instrument
+errors here.</li>
+<li><b>A guard's threshold must be derived from the failure mode it detects.</b> One of ours
+used the precision of the <i>denominator</i> instead, and gave <b>opposite verdicts on the same
+data</b> at two sample sizes.</li>
+<li><b>Every number carries its provenance</b> — ckpt, decode mode, cell, n. "The last table in
+the log" is not provenance.</li>
+<li><b>Means are not verdicts.</b> Any arm difference below ~20pp ships with a McNemar exact
+paired test.</li>
+<li><b>Judge convergence on the reported metric</b>, and evaluate <code>last.pt</code> beside
+<code>best.pt</code> — checkpoint selection alone moved a headline by <b>31 points</b> on
+identical weight trajectories.</li>
+</ul>
 
-<h2>Multi-view consistency from one shared state</h2>
-<p>Every camera renders from the same predicted typed state, so quality cannot degrade
-with view count — measured: PSNR 28.5 / 28.4 / 29.2 at 2 / 4 / 8 synchronized views.
-Because our state is explicit we can split the error Khora cannot: the learned
-renderer is near-transparent (LPIPS 0.006 on true states); ~95% of perceptual error is
-dynamics drift.</p>
-<div class="grid2">
-<figure>
-<img src="assets/skirmish_mosaic_3x3.gif" alt="8 synchronized cameras">
-<figcaption>Eight first-person cameras rendered from ONE shared predicted state
-(SkirmishCTF, slide physics). Watch the red paint territory stay consistent across
-views.</figcaption>
-</figure>
-<figure>
-<img src="assets/ep68_t40_argmax.gif" alt="Craftax truth vs model">
-<figcaption>Craftax-Classic: left = ground truth, right = model rollout, both drawn by
-the <i>unmodified official</i> pixel renderer. Player position and terrain stay
-bit-exact for 61 of 64 steps; the mobs (private-RNG walkers) fork within 1–2 ticks —
-the randomness wall made visible.</figcaption>
-</figure>
-<figure>
-<img src="assets/ep75_t40_argmax.gif" alt="Craftax episode 75">
-<figcaption>Another held-out episode (43 steps exact). Facing direction never diverged
-in any episode.</figcaption>
-</figure>
-<figure>
-<img src="assets/ep68_t40_sample.gif" alt="sampled exogenous">
-<figcaption>C5 mode: mob fields <i>sampled</i> from the fitted conditional instead of
-argmax — the honest generative rollout.</figcaption>
-</figure>
-</div>
-
-<h2>The dial: mean-field ↔ joint decoding (two-domain verdict)</h2>
-<p>Jointly worded with a parallel DMC/Meta-World effort, on a shared paired-Δ ruler:
-(1) <b>no evidence of long-horizon decay</b> of the dial's benefit with training in
-either domain (0/16 and 1/12 resolved ≈ chance); (2) <b>H=1 is the dial's failure
-point in all three domains</b> — signs differ (DMC positive-shrinking, SMAX/Atari
-stable negative, Atari game-level 9:0, p=0.0039) but teacher-forced CE shows no
-top-rung deficit in either domain (0/8 and 5R/7D p=0.77): the cost lives in
-<i>decode time</i>, not in the fit; (3) H=4 is a transition band.</p>
-
-<h2>Live demo (cluster-internal)</h2>
-<p>Three arenas run continuously: a 10 fps smooth arena (engine-authoritative, the
-model as an async shadow with a live position-agreement meter, pane-delta wire
-protocol at 128 KiB/s), a model-authoritative arena where <i>every tick of the world
-you play in is predicted by the transformer</i> (GPU-compiled decode 136 ms via a
-static-KV CUDA-graph surgery, bit-identical to the eager path), and an Atari RAM
-arcade. Fog of war is wall-occluded team-shared line of sight; movement is sub-cell
-sliding physics with acceleration and diagonals.</p>
-
-<p class="dim" style="margin-top:40px">Everything trained from scratch; no pretrained
-video encoders, no diffusion renderers, no LLMs. Data is public or self-generated.
-Full stage report in <a href="STAGE_REPORT_2026-08-25.md">STAGE_REPORT_2026-08-25.md</a>.
-Generated 2026-08-25.</p>
+<p class="dim" style="margin-top:36px">Full staged report:
+<a href="STAGE_REPORT_2026-08-26.md">STAGE_REPORT_2026-08-26.md</a> ·
+previous: <a href="STAGE_REPORT_2026-08-25.md">2026-08-25</a><br>
+Every figure on this page is generated directly from the JSON a SLURM job wrote — no value is
+recomputed or retyped by hand.</p>
 </body>
 </html>
