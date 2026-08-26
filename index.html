@@ -110,6 +110,9 @@ a name. Freeway is the null control and stays at 1.0000 at every horizon.</figca
 <h2>5 · Table 1 — Bayes ceiling vs converged model</h2>
 <p class="dim">Ceilings are model-free (K = 64 real-simulator branches, the evaluator's own
 start set). Models are 60k-step specialists. No model exceeds its own ceiling anywhere.</p>
+<img class="chart" src="assets/f197_table1.png" alt="Table 1 normalised">
+<figcaption>Every bar is model ÷ its own Bayes ceiling. ⚠ marks cells where the ceiling is
+below what 64 starts can resolve — we mark them rather than reporting "0% of ceiling".</figcaption>
 <table>
 <tr><th>env</th><th>H1 ceil/model/norm</th><th>H4</th><th>H16</th><th>H64</th></tr>
 <tr><td>Freeway</td><td>1.000 / 1.000 / <span class="hero">100%</span></td><td>100%</td><td>100%</td><td>0.985 / 0.953 / 96.8%</td></tr>
@@ -145,6 +148,10 @@ fine</b> (Spearman +0.712). The broken thing is <b>event calibration</b>, not ra
 <li>the model believes 8.1 of 64 candidates eat while 1.5 truly do, so its argmax should hit a
 real success <code>1.5/8.1 = 0.19</code> of the time — it measured <b>0.125</b>.</li>
 </ul>
+<img class="chart" src="assets/f195_scorer_fidelity.png" alt="scorer fidelity">
+<figcaption>Measured with the <b>production</b> scorer over the same uniform population CEM
+draws from, on a separate RNG stream so the five planner arms still reproduce their original
+run exactly.</figcaption>
 <div class="box">
 <b>Which metric predicts planning utility?</b> Going 15k → 60k on the same corpus, with four of
 five planner arms <b>bit-identical</b>: both exact-match variants barely move (one is saturated
@@ -154,11 +161,41 @@ falls <b>42%</b>, event calibration improves 5.5× → 3.3×, and planning succe
 </div>
 
 <h2>7 · Rendering and the live server</h2>
+<p class="dim">Rolled out entirely inside the model — the renderer never sees ground truth.
+Left/right pairs below are the two decode modes of the C1 dial on the same start.</p>
+<div class="grid2">
+  <figure><video src="assets/gt_sm_n8_s2026.mp4" controls loop muted playsinline
+    style="width:100%;border-radius:8px;border:1px solid #262d3f"></video>
+  <figcaption>Ground truth (the real engine) — the reference.</figcaption></figure>
+  <figure><video src="assets/rollout_a0_meanfield_sm_n8.mp4" controls loop muted playsinline
+    style="width:100%;border-radius:8px;border:1px solid #262d3f"></video>
+  <figcaption>Model rollout, <b>mean-field</b> decode.</figcaption></figure>
+</div>
+<div class="grid2">
+  <figure><video src="assets/rollout_a1_chain_sm_n8.mp4" controls loop muted playsinline
+    style="width:100%;border-radius:8px;border:1px solid #262d3f"></video>
+  <figcaption>Model rollout, <b>component-chain</b> decode. Which of these two wins is set by
+  the <i>training</i> distribution, not the deployment population — a law we reproduced on a
+  brand-new per-record metric it had never been fitted to.</figcaption></figure>
+  <figure><video src="assets/themeswap_a0_meanfield_sm.mp4" controls loop muted playsinline
+    style="width:100%;border-radius:8px;border:1px solid #262d3f"></video>
+  <figcaption><b>Theme swap</b> — same predicted state, different renderer. The renderer is a
+  deterministic function of state, so appearance is free.</figcaption></figure>
+</div>
 <div class="grid2">
   <figure><img src="assets/skirmish_mosaic_3x3.gif" alt="skirmish mosaic">
-  <figcaption>SkirmishCTF rolled out inside the model.</figcaption></figure>
+  <figcaption>Nine SkirmishCTF rollouts inside the model.</figcaption></figure>
   <figure><img src="assets/ep68_t40_argmax.gif" alt="craftax rollout">
   <figcaption>Craftax, argmax decode.</figcaption></figure>
+</div>
+<div class="grid2">
+  <figure><img src="assets/ep68_t40_sample.gif" alt="craftax sampled">
+  <figcaption>Same Craftax start, <b>sampled</b> decode. Sampling trades modal mass for
+  distributional coverage — and it can only do so where there <i>is</i> a distribution, so it
+  moves the three mob groups and leaves the five near-deterministic ones bit-identical.</figcaption></figure>
+  <figure><video src="assets/iso_preview.mp4" controls loop muted playsinline
+    style="width:100%;border-radius:8px;border:1px solid #262d3f"></video>
+  <figcaption>2.5D isometric view of the same authoritative state.</figcaption></figure>
 </div>
 <div class="grid2">
   <figure><img src="assets/Snake-v1_truth_vs_model.gif" alt="snake truth vs model">
@@ -198,9 +235,16 @@ mode. The truth is that all eight groups sit at <b>≥ 0.9477</b>. Every table n
 </ul>
 </div>
 
+<h2>8b · Craftax per group — where the ceilings actually differ</h2>
+<img class="chart" src="assets/f206_craftax_groups.png" alt="craftax per-group detail">
+<figcaption>The reason a per-component view is necessary: within a single environment the
+model-free ceilings span a factor of three (cows 0.313 → plants 1.000). A whole-state number
+averages that away and reports only "this environment is stochastic".</figcaption>
+
 <h2>9 · Three scaling axes, two now closed</h2>
 <p>SpaceInvaders H64 = 78.1% is the only clean estimation target left: p_stoch is identically 0
 under both policies and the ceiling is exactly 1.0000, so no stochasticity can be blamed.</p>
+<img class="chart" src="assets/f208_scaling_axes.png" alt="scaling axes">
 <table>
 <tr><th>axis</th><th>verdict</th></tr>
 <tr><td>data (4×)</td><td class="dim">withdrawn — unresolved against the correct baseline</td></tr>
