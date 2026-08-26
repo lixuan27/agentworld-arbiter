@@ -160,6 +160,85 @@ falls <b>42%</b>, event calibration improves 5.5× → 3.3×, and planning succe
 <b>75% relative</b>. The predictive quantities are <b>scorer-level</b>, not state-accuracy-level.
 </div>
 
+<h2>6b · The 3-D tier — a first-person voxel world, built to our own rules</h2>
+<p>Everything above has a globally observed, top-down state, so "one state, many
+views" is nearly free: all views share one world grid. <b>VoxelWorld</b> removes that.
+The state is a 3-D block grid plus entity records; every agent carries <b>yaw and pitch
+in the state</b>, turning is an <b>action</b>, and the observation is a first-person
+raycast, so <b>occlusion is real</b>.</p>
+<div class="box warn">
+<b>Why we built this instead of wrapping Minecraft.</b> MineRL, Malmo and Craftium are
+far richer, and every one of them fails the three prerequisites this project's method
+rests on: <b>determinism</b> (so a ceiling measured by branching is a ceiling and not
+engine noise), <b>snapshot/restore</b> (required to branch at all), and <b>state
+injection</b> (required for population invariance and for feeding a model's own
+prediction back in). Without those, none of the model-free ceilings on this page can be
+measured there. Same reason SkirmishCTF was built instead of driving official DMLab2D.
+The substrate passes a <b>13/13 admission gate</b> covering all three plus view-change,
+occlusion and render purity — a substrate we wrote ourselves gets held to the check
+more strictly, not less, because there is no upstream to blame.
+</div>
+<img class="chart" src="assets/voxel_views.png" alt="one state, eight viewpoints">
+<figcaption>One authoritative state, eight viewpoints. The block grid is asserted
+bit-identical across all eight; only <code>a_yaw</code> differs.</figcaption>
+<img class="chart" src="assets/voxel_occlusion.png" alt="occlusion">
+<figcaption>Occlusion is real: a mob three blocks ahead changes 5.0% of pixels, and a
+wall hides it entirely. Without this, the number below would be 1 by construction.</figcaption>
+
+<div class="box">
+<b>The 3-D tier's headline, and it is model-free — no checkpoint, no training.</b>
+Branching the real engine from 1152 ticks across 6 worlds, K=32 draws each:
+<table>
+<tr><th>quantity</th><th>value</th><th>meaning</th></tr>
+<tr><td>p_stoch<sup>state</sup></td><td>0.1241</td><td>chance the world contains</td></tr>
+<tr><td>p_stoch<sup>obs</sup></td><td>0.0373</td><td>chance one agent can <i>see</i></td></tr>
+<tr><td><b>visible_chance</b></td><td class="hero"><b>0.3007</b></td><td>fraction of the world's randomness reaching this viewpoint</td></tr>
+<tr><td>one-step ceiling</td><td>state <b>0.9400</b> → obs <b>0.9973</b></td><td>predicting what an agent SEES is <i>easier</i></td></tr>
+</table>
+<p>So in an egocentric world the ceiling on predicting the <b>observation</b> is strictly
+<i>higher</i> than the ceiling on predicting the <b>state</b>, because occlusion hides
+70% of the chance. That cuts against the intuition that partial observability always
+makes prediction harder — and the flat tier cannot express it at all, since a global
+top-down view sees everything and the ratio is 1 by construction.</p>
+<p class="dim">What it means for the thesis: "predict the authoritative state" and
+"predict what the agent sees" are different problems with different ceilings. The
+state-carrying interface is being asked for <b>3.3×</b> more than any single consumer
+needs. Boundary stated: one substrate, one stochastic event type, one viewpoint — the
+<i>direction</i> follows from rendering being deterministic and is not
+substrate-specific, the <i>magnitude</i> 0.3007 is.</p>
+</div>
+<img class="chart" src="assets/voxel_rollout.png" alt="voxel rollout">
+<figcaption>What one agent actually receives over a day/night cycle. Night mob spawn is
+the substrate's only chance event, and its whole budget is drawn from an exogenous tick
+passed into the step function — which is what makes re-running one tick with K draws a
+well-defined operation.</figcaption>
+
+<h2>6c · One state, arbitrary camera — the 3-D version of the many-views claim</h2>
+<p>On DeepMind Control we re-place the camera at poses sampled over the viewing sphere,
+none of which the model was optimised for, and score the same predicted states through
+them. Task cameras and sampled cameras are measured in the <b>same run on the same
+starts</b>.</p>
+<table>
+<tr><th>task</th><th>free − task worst-view, H1 / H4 / H16 (dB)</th><th>free panel spread @H1</th><th>task spread @H1</th></tr>
+<tr><td>quadruped-run</td><td>+2.19 / +2.12 / +2.77</td><td>12.04</td><td>20.79</td></tr>
+<tr><td>walker-walk</td><td>+4.83 / +2.87 / −0.02</td><td>3.90</td><td>10.64</td></tr>
+<tr><td>cheetah-run</td><td>−0.74 / +1.07 / +0.16</td><td>8.32</td><td>0.52</td></tr>
+<tr><td>fish-swim</td><td>+0.13 / +0.83 / +1.24</td><td class="bad">23.27</td><td>9.28</td></tr>
+<tr><td><b>humanoid-walk</b></td><td class="bad">−5.51 / −4.50 / −5.14</td><td>8.94</td><td>4.85</td></tr>
+</table>
+<p>The preregistered negative — "the state is right only from the cameras it was scored
+on" — is <b>not supported</b> on 3 of 5 tasks; no task collapses off its own cameras.
+humanoid-walk is the one where arbitrary viewpoints reliably find errors the task
+cameras miss. The durable result is the other one: <b>a single-view PSNR on these tasks
+moves by 10–23 dB purely with the camera you name</b>, whether that camera comes from
+the task or from a fair sample of the viewing sphere. That is larger than most
+model-vs-model gaps this literature reports.</p>
+<p class="dim">An earlier version of this panel sampled orbit-distance views only, and we
+said so at the time. Widening it to a fair superset of the task framings moved
+<i>every</i> task toward "free cameras are harder" — humanoid-walk's deficit grew from
+−3.20 to −5.51 dB and fish-swim's panel spread more than quadrupled. The confound was
+real; closing it strengthened the spread result rather than weakening it.</p>
+
 <h2>7 · Rendering and the live server</h2>
 <p class="dim">Rolled out entirely inside the model — the renderer never sees ground truth.
 Left/right pairs below are the two decode modes of the C1 dial on the same start.</p>
