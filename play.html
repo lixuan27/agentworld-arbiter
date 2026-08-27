@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARBITER — play the world model</title>
+<style>
+  :root{--bg:#0b0d13;--panel:#141823;--edge:#262d3f;--ink:#d6dae4;--dim:#8a90a2;
+        --gold:#ffc478;--ok:#78fa96;--red:#ff5566;--blue:#55aaff}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1100px 500px at 70% -10%,#171c2c 0%,var(--bg) 60%);
+       color:var(--ink);font:15px/1.6 "SF Mono","JetBrains Mono",Consolas,monospace;
+       max-width:1060px;margin:0 auto;padding:28px 18px 60px}
+  h1{font-size:24px;margin-bottom:4px}h1 b{color:var(--gold)}
+  h2{font-size:15px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;
+     margin:34px 0 10px;border-bottom:1px solid var(--edge);padding-bottom:6px}
+  p{margin:10px 0;max-width:900px}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:14px}
+  .dim{color:var(--dim)}
+  a{color:var(--blue)}
+  code{background:#20263a;padding:1px 6px;border-radius:4px;font-size:13px}
+  .box{background:var(--panel);border:1px solid var(--edge);border-radius:8px;
+       padding:12px 16px;margin:14px 0}
+  .box.warn{border-color:#5a3a2a}
+  canvas{background:#0b0d13;border:1px solid var(--edge);border-radius:8px;
+         image-rendering:pixelated;display:block}
+  .row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+  button,select{background:#20263a;color:var(--ink);border:1px solid var(--edge);
+    border-radius:6px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+  button:hover{border-color:var(--gold)}
+  button:disabled{opacity:.4;cursor:default}
+  .kbd{display:inline-block;background:#20263a;border:1px solid var(--edge);
+       border-bottom-width:2px;border-radius:4px;padding:0 6px;font-size:12px}
+  .stat{font-size:12.5px;color:var(--dim);margin-top:8px;line-height:1.8}
+  .stat b{color:var(--ink)}
+  .bad{color:var(--red)}.ok{color:var(--ok)}
+</style>
+</head>
+<body>
+
+<h1>Play the <b>world model</b> — and the world it was trained on</h1>
+<p class="sub"><a href="index.html">← back to results</a> &nbsp;·&nbsp; two demos:
+one runs the trained network in your browser, the other runs the ground-truth
+simulator. They are deliberately separate.</p>
+
+<h2>1 · The learned world model, running here</h2>
+<div class="box">
+<p>Below is <b>not a game engine</b>. Every frame is produced by the 5M-parameter
+transformer this project trained, running in your browser: you press a key, it
+autoregressively emits the next <em>authoritative state</em> — every field, one
+4-bit digit at a time — and the page draws whatever it emitted. Nothing corrects
+it. If the model gets the physics wrong, you will see the physics go wrong, which
+is the honest behaviour for a world-model demo.</p>
+<p class="dim">All three are the converged <b>60k-step</b> models — the exact ones
+behind Table 1. An earlier export silently grabbed the 15k-step run instead; it was
+caught because the exporter prints the step it loaded.</p>
+<p><b>The port is verified, not asserted.</b> Two separate checks, because they
+fail for different reasons: the fp16 round trip changes <b>0 of 2640 / 1680 / 2160</b>
+predicted nibbles, and the JavaScript itself was replayed against PyTorch on every
+exported start state and action — <b>0 of 2646, 0 of 2133 and 0 of 1314 nibbles
+differ</b>, digit for digit. If either had been non-zero the page would say so,
+because a demo that quietly disagrees with the numbers beside it is worse than no
+demo.</p>
+<p class="dim">⏱ Roughly <b>1 second per transition</b> in a browser: each tick is
+70–110 sequential decode steps through six transformer layers, in plain
+JavaScript. Use <b>step</b> to go one tick at a time, or <b>auto-play</b> to let it
+run. This is a fidelity demo, not a speed demo — the same model runs at thousands
+of transitions per second on the GPU.</p>
+</div>
+
+<div class="row">
+  <div>
+    <div style="margin-bottom:8px">
+      <select id="env">
+        <option value="Breakout-MinAtar">Breakout — you control the paddle</option>
+        <option value="Freeway-MinAtar">Freeway — smallest state, fastest</option>
+        <option value="Asterix-MinAtar">Asterix — the honest failure case</option>
+      </select>
+      <button id="load">load model</button>
+      <button id="stepb" disabled>step</button>
+      <button id="auto" disabled>auto-play</button>
+      <button id="reset" disabled>new start</button>
+    </div>
+    <canvas id="game" width="360" height="360"></canvas>
+    <div class="stat" id="stat">pick an environment and press <b>load model</b>
+      (≈9.6&nbsp;MB, fetched once).</div>
+  </div>
+  <div>
+    <div style="margin-bottom:8px" class="dim">the authoritative state itself —
+      one cell per 4-bit field, <span class="bad">red = changed this tick</span></div>
+    <canvas id="fields" width="360" height="200"></canvas>
+    <div class="stat" id="fstat"></div>
+    <div class="box" style="max-width:380px;font-size:12.5px">
+      <b>controls</b><br>
+      Breakout <span class="kbd">←</span> <span class="kbd">→</span> move paddle,
+      <span class="kbd">space</span> stay<br>
+      Freeway <span class="kbd">↑</span> <span class="kbd">↓</span> move,
+      <span class="kbd">space</span> stay<br>
+      Asterix <span class="kbd">←</span> <span class="kbd">→</span>
+      <span class="kbd">↑</span> <span class="kbd">↓</span>
+      <span class="kbd">space</span>
+    </div>
+  </div>
+</div>
+
+<div class="box warn">
+<p><b>What to look for.</b> Watch the field strip on the right: on most ticks only
+a handful of the state's digits change. That is the whole reason the
+<code>COPY</code> token exists — under a plain codec the model has no way to
+<em>say</em> "unchanged" and must restate every field correctly, which is how it
+managed to score worse than doing nothing on the 3-D substrate.</p>
+<p>Breakout is the delta (COPY) model, whose H32 exactness went 0.656 → 1.000.
+Asterix is included precisely because it <em>fails</em>: its ceiling at H16 is
+0.047, so the environment itself forbids long exact rollouts, and you should be
+able to watch the state come apart. A page that only showed the winning domain
+would be advertising, not evidence.</p>
+</div>
+
+<h2>2 · VoxelWorld — the simulator, in first person</h2>
+<div class="box">
+<p>This one is the <b>ground-truth engine</b>, ported to JavaScript: the same block
+types, the same 8 yaws and 5 pitches, the same reach-4 raycast, the same
+gravity-and-step-up rule. It is here because the view-changing substrate has to be
+felt to be understood — occlusion is real, so what you see is a genuinely
+many-to-one function of the world state, and <em>turning changes which part of the
+world's randomness reaches you</em>. A single viewpoint receives 30.07% of it; an
+agent can move that number by 0.3125 just by looking around.</p>
+</div>
+<div class="row">
+  <div>
+    <canvas id="vox" width="512" height="384"></canvas>
+    <div class="stat" id="vstat"></div>
+  </div>
+  <div class="box" style="max-width:340px;font-size:12.5px">
+    <b>controls</b><br>
+    <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> move ·
+    <span class="kbd">Q</span><span class="kbd">E</span> turn ·
+    <span class="kbd">R</span><span class="kbd">F</span> look up/down<br>
+    <span class="kbd">space</span> jump ·
+    <span class="kbd">G</span> dig ·
+    <span class="kbd">H</span> place ·
+    <span class="kbd">N</span> new world<br><br>
+    <b>Digging changes what other agents see.</b> That second-order path — your
+    hole lets someone else's ray reach a different block — is exactly what a
+    collision-counting metric misses, and why the project measures contention by
+    replaying each tick with one agent acting instead of counting shared targets.
+  </div>
+</div>
+
+<script src="voxel.js"></script>
+<script src="play.js"></script>
+<script>
+'use strict';
+// ---------------------------------------------------------------- model demo
+let NET = null, CODEC = null, META = null, BLK = null, PREV = null;
+let autoT = null, action = 0, steps = 0, msAvg = 0;
+const $ = (id) => document.getElementById(id);
+const gctx = $('game').getContext('2d');
+const fctx = $('fields').getContext('2d');
+
+async function load() {
+  const env = $('env').value;
+  $('load').disabled = true; $('stat').textContent = 'fetching ' + env + ' …';
+  try {
+    META = await (await fetch(`assets/models/${env}.json`)).json();
+    const buf = await (await fetch(`assets/models/${env}.bin`)).arrayBuffer();
+    NET = new WorldModel(META, buf); CODEC = new Codec(META);
+    newStart();
+    $('stepb').disabled = $('auto').disabled = $('reset').disabled = false;
+  } catch (e) {
+    $('stat').innerHTML = '<span class="bad">load failed: ' + e + '</span>';
+  }
+  $('load').disabled = false;
+}
+function newStart() {
+  const s = META.starts[Math.floor(Math.random() * META.starts.length)];
+  BLK = Int32Array.from(s); PREV = null; steps = 0; msAvg = 0;
+  draw(0);
+}
+function draw(ms) {
+  const st = CODEC.assemble(BLK);
+  drawMinAtar(gctx, META.env, st, 360, 360);
+  const r = drawFields(fctx, META, BLK, PREV, 360, 200);
+  $('stat').innerHTML =
+    `<b>${META.env}</b> · ${META.n_fields} fields · ${META.n_layers}×${META.d_model} ` +
+    `· step ${META.step}${META.delta ? ' · COPY codec' : ''}<br>` +
+    `rollout tick <b>${steps}</b>` + (ms ? ` · ${ms.toFixed(0)} ms/transition` +
+    (msAvg ? ` (avg ${msAvg.toFixed(0)})` : '') : '');
+  $('fstat').innerHTML = PREV
+    ? `<b>${r.changed}</b> of ${META.n_fields} digits changed this tick ` +
+      `(${(100 * r.changed / META.n_fields).toFixed(1)}%)`
+    : 'press step to run one transition through the network';
+}
+function stepOnce() {
+  if (!NET) return;
+  const t0 = performance.now();
+  PREV = BLK;
+  BLK = predict(NET, CODEC, BLK, action);
+  const ms = performance.now() - t0;
+  steps++; msAvg = msAvg ? 0.8 * msAvg + 0.2 * ms : ms;
+  draw(ms);
+}
+$('load').onclick = load;
+$('stepb').onclick = stepOnce;
+$('reset').onclick = newStart;
+$('auto').onclick = () => {
+  if (autoT) { clearInterval(autoT); autoT = null; $('auto').textContent = 'auto-play'; }
+  else { autoT = setInterval(stepOnce, 60); $('auto').textContent = 'stop'; }
+};
+$('env').onchange = () => {
+  if (autoT) { clearInterval(autoT); autoT = null; $('auto').textContent = 'auto-play'; }
+  NET = null; $('stepb').disabled = $('auto').disabled = $('reset').disabled = true;
+  $('stat').textContent = 'press load model';
+};
+
+// ---------------------------------------------------------------- voxel demo
+const vctx = $('vox').getContext('2d');
+const VW = 128, VH = 96;                    // raycast resolution, then upscaled
+const vimg = vctx.createImageData(VW, VH);
+const off = document.createElement('canvas'); off.width = VW; off.height = VH;
+const octx = off.getContext('2d');
+let world = new VX.World(16, 16, 8, 12345);
+
+function vdraw() {
+  world.render(vimg.data, VW, VH, 70);
+  octx.putImageData(vimg, 0, 0);
+  vctx.imageSmoothingEnabled = false;
+  vctx.drawImage(off, 0, 0, 512, 384);
+  const hit = world.raycast();
+  const inv = Array.from(world.inv).map((n, i) => n ? `${VX.NAMES[i]}×${n}` : null)
+    .filter(Boolean).join(' ') || 'empty';
+  $('vstat').innerHTML =
+    `pos (${world.ax},${world.ay},${world.az}) · yaw <b>${world.yaw}</b>/8 · ` +
+    `pitch <b>${world.pitch}</b> · tick ${world.tick}<br>` +
+    `aiming at ${hit.hit ? '<b>' + VX.NAMES[world.get(hit.bx, hit.by, hit.bz)] + '</b>' : '—'}` +
+    ` · broke ${world.broke} · placed ${world.placed} · inventory ${inv}`;
+}
+const VKEYS = { w: 1, s: 2, a: 3, d: 4, q: 5, e: 6, r: 7, f: 8, ' ': 9, g: 10, h: 11 };
+window.addEventListener('keydown', (ev) => {
+  const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+  // model demo: arrows set the action, then advance one transition
+  const map = { ArrowLeft: 1, ArrowRight: 2, ArrowUp: 1, ArrowDown: 2, ' ': 0 };
+  if (NET && (k in map)) {
+    if (k === 'ArrowUp' || k === 'ArrowDown') action = META.env.startsWith('Freeway') ? map[k] : 0;
+    else if (k === 'ArrowLeft' || k === 'ArrowRight') action = map[k];
+    else action = 0;
+    action = Math.min(action, META.n_actions - 1);
+    stepOnce(); ev.preventDefault(); return;
+  }
+  if (k === 'n') { world = new VX.World(16, 16, 8, (Math.random() * 1e9) | 0); vdraw(); ev.preventDefault(); return; }
+  if (k in VKEYS) { world.step(VKEYS[k], true); vdraw(); ev.preventDefault(); }
+});
+vdraw();
+</script>
+</body>
+</html>
