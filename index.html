@@ -220,15 +220,79 @@ submitted until an error decomposition says whether the missing mass is recovera
 no branch of the real simulator ever produced, which no metric on this bench can
 currently see).</p>
 
-<h3>5. A view-generalisation headline that was not a measurement</h3>
+<h3>5. A view-generalisation headline that was not a measurement — and its correction</h3>
 <img class="chart" src="assets/f230_freecam_unfloored.png" alt="free camera without floors">
 <p>Rendering a predicted state from freely-sampled camera poses produced
 <code>+12.49&nbsp;dB</code> and <code>+10.47&nbsp;dB</code> for two DMC domains —
 free cameras apparently beating the task cameras by 10&nbsp;dB. That is not a good
 result, it is an uninterpretable one: raw PSNR rewards a pose that frames mostly
 empty background, and free-camera spread runs 1.7–95× the task-camera spread in
-every column. Each pose now also renders a frozen state and an unrelated scene, so
-the headline is a difference-in-differences and the pose's own easiness cancels.</p>
+every column. So each pose now also renders a frozen state and an unrelated scene,
+making the headline a difference-in-differences in which the pose's own easiness
+cancels. The prediction was written down before the rerun: <em>the two positives
+shrink toward zero or invert; the three already-negative rows hold, because a real
+view-overfit cannot be manufactured by empty framing.</em></p>
+<img class="chart" src="assets/f238_freecam_floored.png" alt="free camera floored">
+<div class="box hero">
+<p>Both halves confirmed, and the ranking inverts.
+<b>manipulator-bring_ball goes from the best row in the panel (+10.47) to the worst
+(−7.06)</b>; cartpole flips from +12.49 to −1.69; fish, finger and hopper stay
+negative. The mechanism is visible in the components: from free poses the model
+beats "nothing moved" by only +1.99&nbsp;dB while from the task cameras it beats it
+by +9.05&nbsp;dB. That <em>is</em> view-overfitting, and the raw metric reported it
+as the best result on the bench.</p>
+</div>
+<p>A second result fell out that was not predicted. Counting how many sampled
+viewpoints the model fails to beat the frozen initial state from, every domain
+starts at 0/8 at H=1 — and three of them saturate at 8/8 by H=16. Past that
+horizon the rollout has stopped earning anything at all from a novel viewpoint.</p>
+<img class="chart" src="assets/f238b_no_better_than_frozen.png" alt="views no better than frozen">
+<p class="dim">Of the two floors built, only one discriminates: beating a
+completely unrelated state is easy, so the mismatch floor is systematically
+generous and the frozen floor is the binding one. Reported both, headlined the
+strict one.</p>
+
+<h3>6. What the 18.8 pp is actually made of — and the field it renames</h3>
+<p>Branching the real simulator 32 times per transition splits the model's errors
+into cells that mean different things. Most of the gap turns out to be
+<em>recoverable</em>: on transitions where the simulator had exactly one possible
+answer, the model missed it 16.02% of the time, against only 3.12% where it
+produced a successor no branch of the simulator ever produced. That 5.1× ratio is
+what licensed the capacity sweep — had it come out the other way, more parameters
+could not have helped.</p>
+<img class="chart" src="assets/f239_error_decomposition.png" alt="error decomposition">
+<div class="box hero">
+<p>The more useful half is that the decomposition <b>renames the deficiency</b>.
+The plain per-group table had mobs looking nearly as bad as blocks. On
+deterministic transitions only, <b>mobs are exactly 0.0000</b> — every mob error
+belonged to the world, not the model — and the worst field is <b>a_z</b>, the
+agent's height, which had ranked mid-pack. And <code>a_z</code> is the one field
+whose ground truth is a <em>loop</em>: gravity scans the block column downward until
+it hits something solid. That is an iterated relational read, not a lookup, which
+is why the sweep's hypothesis arm doubles <em>depth</em> and its control doubles
+<em>width</em> with more parameters.</p>
+</div>
+<p class="dim">One more thing the decomposition says: <code>stoch_in_support</code>
+is 0.0000 in both corpora. The model never predicts a reachable-but-not-modal
+successor. When it is wrong on a stochastic transition it produces something the
+simulator <em>cannot</em> produce — it is not hedging across the support, it is
+confidently leaving it.</p>
+
+<h3>7. C1 finally has a trained model on the view-changing substrate</h3>
+<p>Everything above on the 3-D tier was either single-agent or model-free, because
+the voxel corpus generator hard-coded one agent. Two multi-agent corpora now exist
+and are verified: <b>voxel_crowd8</b> (15×15×8, N=8, 93.1% of state shared,
+D_compose 0.0156 — the world held fixed against the published single-agent corpus)
+and <b>voxel_crowd32</b> (12×12×8, N=32, 61.4% shared, D_compose 0.2604 — where the
+mechanism should be loudest). Both report because a claim that survives only at the
+crowded end is a different claim from one that holds at both.</p>
+<p>The evaluator now scores the split the model-free result says matters —
+<code>shared_exact</code> against <code>agent_exact_mean</code> — from slices the
+codec owns rather than a second local copy. Pre-registered: per-agent exactness
+should far exceed shared-world exactness, with the gap widening from crowd8 to
+crowd32. If they track each other instead, the trained model is not reproducing the
+model-free structure, and that is a real negative about the framing rather than a
+bug.</p>
 
 <h2>The 3-D tier — what only a first-person world can say</h2>
 <p>A top-down grid makes "one state, many views" nearly free, because every viewer
