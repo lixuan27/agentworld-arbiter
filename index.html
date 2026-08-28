@@ -315,7 +315,32 @@ successor. When it is wrong on a stochastic transition it produces something the
 simulator <em>cannot</em> produce — it is not hedging across the support, it is
 confidently leaving it.</p>
 
-<h3>7. C1 finally has a trained model on the view-changing substrate</h3>
+<h3>7. Can one model be the interface for six environments?</h3>
+<p>This is the cross-environment leg of the thesis, and it had been judged against
+the wrong baseline: the published verdict compared 75k/90k-step universal models
+against the <b>15k-step</b> experts rather than the converged ones. That matters most
+exactly where the universal model is weakest — converging the experts had already
+been measured to move SpaceInvaders H64 from 0.188 to 0.781.</p>
+<img class="chart" src="assets/f247_universal_vs_experts.png" alt="universal vs experts">
+<div class="box hero">
+<p>Re-judged against converged experts, the answer is genuinely <b>two-sided</b>.
+One 20M model <b>beats</b> six 5M specialists on Breakout H32 (+0.1562, 15-5,
+p=0.041), <b>ties Snake exactly</b> — 0 wins and 0 losses at every horizon, the same
+starts solved — and sits within noise on Asterix and Seaquest. It then
+<b>collapses</b> on SpaceInvaders H64: −0.6875, 0 wins against 44 losses. The old
+baseline priced that at −0.094, understating it 7.3×.</p>
+<p>SpaceInvaders is the one environment whose ceiling is exactly 1.000 — pure
+estimation error, the only clean capacity target on the bench. So the universal
+model's collapse there is a <em>capacity</em> story rather than a new mystery, and
+it is consistent with what the specialist result already said.</p>
+</div>
+<p class="dim">One detail worth keeping: the 5M universal reads <code>+0.0000</code>
+on Breakout H32 with <b>thirteen wins and thirteen losses</b>. Identical score,
+disjoint competence. An aggregate-only table would have called those two models
+equivalent — which is why every comparison here is paired on the per-start outcome
+vector rather than on means.</p>
+
+<h3>8. C1 finally has a trained model on the view-changing substrate</h3>
 <p>Everything above on the 3-D tier was either single-agent or model-free, because
 the voxel corpus generator hard-coded one agent. Two multi-agent corpora now exist
 and are verified: <b>voxel_crowd8</b> (15×15×8, N=8, 93.1% of state shared,
