@@ -373,7 +373,36 @@ disjoint competence. An aggregate-only table would have called those two models
 equivalent — which is why every comparison here is paired on the per-start outcome
 vector rather than on means.</p>
 
-<h3>8. C1 finally has a trained model on the view-changing substrate</h3>
+<h3>8. Does authoritative state have to hand the renderer its projection?</h3>
+<p>This is the <em>renderable</em> leg, and the only substrate here that can test it:
+VoxelWorld puts the camera inside the state, so a renderer must learn the
+projection rather than memorise one. Train on six yaws, evaluate on the two never
+seen. Both arms receive the camera <em>completely</em> — sin/cos of yaw and pitch
+plus normalised position is enough to reconstruct the geometry exactly. They differ
+in one thing: whether that geometry arrives <b>already resolved onto the image
+plane</b> as a per-pixel ray direction. Same parameters, same tokens, same data,
+same schedule.</p>
+<img class="chart" src="assets/f253_renderer_holdout_yaw.png" alt="renderer held-out yaw">
+<div class="box warn">
+<p><b>A clean null, and then a harder negative than the one we designed for.</b>
+The two arms are indistinguishable — <b>20.832 dB vs 20.864 dB</b> on held-out
+yaws, 0.03 dB apart, with the curves crossing repeatedly at all ten evaluation
+points. Handing the renderer the projection bought nothing; the pose-only arm
+derives whatever it needs.</p>
+<p>The floor is the real finding. <b>Neither arm comes close to it.</b> Simply
+rotating to the nearest <em>trained</em> yaw and rendering the true state scores
+26.70 dB — beating an 11.7M-parameter learned renderer by <b>5.9 dB</b>. Without
+that floor, "20.8 dB on unseen viewpoints" would have read as a result.</p>
+<p class="dim">Both arms <em>do</em> use the camera: pinning it costs 4.55 dB, and
+a camera-pinned model (16.28 dB) scores about the same as rendering a completely
+unrelated scene (16.01 dB). So the models are genuinely conditioned on the
+viewpoint — they just don't need the rays supplied, and they don't beat rotating
+to a view you already have. On a substrate where held-out yaws sit 45° from
+trained ones, that is a statement about when learning a renderer is worth it at
+all.</p>
+</div>
+
+<h3>9. C1 finally has a trained model on the view-changing substrate</h3>
 <p>Everything above on the 3-D tier was either single-agent or model-free, because
 the voxel corpus generator hard-coded one agent. Two multi-agent corpora now exist
 and are verified: <b>voxel_crowd8</b> (15×15×8, N=8, 93.1% of state shared,
@@ -383,11 +412,25 @@ mechanism should be loudest). Both report because a claim that survives only at 
 crowded end is a different claim from one that holds at both.</p>
 <p>The evaluator now scores the split the model-free result says matters —
 <code>shared_exact</code> against <code>agent_exact_mean</code> — from slices the
-codec owns rather than a second local copy. Pre-registered: per-agent exactness
-should far exceed shared-world exactness, with the gap widening from crowd8 to
-crowd32. If they track each other instead, the trained model is not reproducing the
-model-free structure, and that is a real negative about the framing rather than a
-bug.</p>
+codec owns rather than a second local copy.</p>
+<p><b>Pre-registered, and not yet answered.</b> The test is the
+<em>ceiling-normalised</em> comparison — <code>agent_exact_mean</code>/0.9989
+against <code>shared_exact</code>/0.9436 at N=8 — because the raw ordering is
+already implied by where the world's randomness lives, so an unnormalised version
+would have been confirmed by the environment regardless of the model. C1 predicts
+the normalised shared score falls below the normalised agent score, with the
+deficit growing from crowd8 to crowd32; if they normalise to the same level, the
+model-free structure does not transfer to a learned predictor and that is a real
+negative about the framing.</p>
+<div class="box warn">
+<p><b>Status: the training arm was cancelled at 38k of 60k steps to free GPUs for
+other work, so this cell is empty.</b> The corpora, the codec, the gates, the
+evaluator split and the model-free ceilings all exist; what is missing is the
+trained model. Neither trainer here supports resuming — checkpoints carry weights
+but not optimizer state — so the run restarts from zero when it is picked up
+again. Recording that plainly rather than leaving the pre-registration looking
+like a pending result.</p>
+</div>
 
 <h2>The 3-D tier — what only a first-person world can say</h2>
 <p>A top-down grid makes "one state, many views" nearly free, because every viewer
