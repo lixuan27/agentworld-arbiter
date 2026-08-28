@@ -173,13 +173,39 @@ domains the effect is resolved and enormous in three, and once <em>harmful</em>.
 <p>The natural explanation — "bigger states benefit more" — is dead on data we
 already had. Sorting the seven evaluated domains by field count gives a completely
 non-monotone curve: <b>Seaquest, the largest state on the bench at 1924 fields,
-gains exactly 0.0000</b>, while Breakout at 110 fields gains +0.3438. What predicts
-the gain is the share of state held in structures that are <em>large and rarely
-changing</em>, not the total.</p>
+gains exactly 0.0000</b>, while Breakout at 110 fields gains +0.3438. That part
+still stands — field count carries no signal.</p>
+<p>The <em>replacement</em> we proposed — that the gain tracks the share of state
+held in large, rarely-changing structures — was then put to a pre-registered test
+and did not survive it. See the box below.</p>
 <img class="chart" src="assets/f228_fieldcount_vs_copygain.png" alt="field count vs gain">
-<figcaption>Two step-and-corpus-matched Craftax arms are now in flight to test this
-with the <em>environment held fixed</em> — 1530 fields (predicted large) versus 236
-(predicted small). Both moving together would refute the rule.</figcaption>
+
+<div class="box warn">
+<p><b>The rule failed its own pre-registered test, and is withdrawn.</b> Two
+step- and corpus-matched Craftax arms were run to test it with the environment
+held fixed. Craftax-full is <b>99.08% static per tick</b> — five of its field
+groups have a copy rate of exactly 1.000 — so if static share drove the gain, it
+should have been unmissable there.</p>
+<p>It was not. Across two checkpoints and four horizons, <b>not one cell is
+resolved</b>. The most favourable reading is H1 +0.0781 with 5 wins and 0 losses
+(p=0.0625), just short of this project's own threshold; H64 is −0.0156 on both.
+Set against voxel's 49-0 (p&lt;1e-14) and Breakout's 22-0 (p&lt;1e-5), that is a
+refutation, not a weak confirmation.</p>
+<p>The obvious replacement — "it helps when the plain model is below its identity
+floor" — fails too. Voxel is the only domain below its floor and it does have the
+largest gain, but Breakout gains +0.3438 with a comfortable margin, while Craftax
+and Seaquest have the two <em>smallest</em> margins and gains of +0.031 and 0.000.
+Neither statistic orders the eight domains.</p>
+<p><b>What survives is narrower and should be stated that way:</b> COPY rescues a
+model that is measurably below its identity floor (voxel — the only such case),
+and it can stabilise deep-horizon rollout where the one-step map is already
+saturated (Breakout at H32). It does not predict a gain from corpus statistics.</p>
+<p class="dim">Withdrawing something else in the process: the chart above quotes
+one "best horizon" gain per domain, which merged two different phenomena. Voxel's
+gain is at H1 because its plain model was <em>broken</em> at H1; Breakout's is at
+H32 because its plain model is already 1.000 at H1 and has no room. Those belong
+in separate columns and had been in one since the rule was first stated.</p>
+</div>
 
 <h3>2. Contests damage the world, not the contestants</h3>
 <p>The project's core claim is that predicting each record independently and

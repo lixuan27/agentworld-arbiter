@@ -180,9 +180,12 @@ models behind Table 1.</p>
 <p>Two wire formats over the same game: <b>236 fields</b> (Classic — player,
 inventory, a 3×3 terrain patch) and <b>1530 fields</b> (Full — 67 achievements,
 9 floors of chests and kills, 72 ladder fields the schema itself annotates
-"static per episode", 126 mob slots). Both are currently running COPY arms, and the
-pair is a within-domain test of the rule that the COPY gain tracks
-<em>static share</em> rather than field count.</p>
+"static per episode", 126 mob slots). The pair was run as a within-domain test of
+the rule that the COPY gain tracks <em>static share</em> rather than field count —
+and <b>refuted it</b>: despite being 99.08% static per tick, Craftax-full shows no
+resolved COPY effect at any horizon (best cell H1 +0.0781, 5-0, p=0.0625), against
+voxel's 49-0 and Breakout's 22-0. See the <a href="index.html#new">results
+page</a>.</p>
 <div class="grid2">
   <figure><img class="px" src="assets/ep68_t40_argmax.gif" alt="craftax argmax">
   <figcaption>Argmax decoding.</figcaption></figure>
