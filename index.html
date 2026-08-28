@@ -181,16 +181,23 @@ and did not survive it. See the box below.</p>
 <img class="chart" src="assets/f228_fieldcount_vs_copygain.png" alt="field count vs gain">
 
 <div class="box warn">
-<p><b>The rule failed its own pre-registered test, and is withdrawn.</b> Two
-step- and corpus-matched Craftax arms were run to test it with the environment
-held fixed. Craftax-full is <b>99.08% static per tick</b> — five of its field
-groups have a copy rate of exactly 1.000 — so if static share drove the gain, it
-should have been unmissable there.</p>
-<p>It was not. Across two checkpoints and four horizons, <b>not one cell is
-resolved</b>. The most favourable reading is H1 +0.0781 with 5 wins and 0 losses
-(p=0.0625), just short of this project's own threshold; H64 is −0.0156 on both.
-Set against voxel's 49-0 (p&lt;1e-14) and Breakout's 22-0 (p&lt;1e-5), that is a
-refutation, not a weak confirmation.</p>
+<p><b>The rule's ordering survived; its magnitude did not — and the magnitude was
+the whole point.</b> Two step- and corpus-matched Craftax arms tested it with the
+environment held fixed. Craftax-full is <b>99.08% static per tick</b> — five field
+groups at a copy rate of exactly 1.000 — so a large gain should have been
+unmissable there. Craftax-classic, at 93.77%, was the predicted-small control.</p>
+<p>Full: across two checkpoints and four horizons, <b>not one cell is resolved</b>.
+The most favourable reading is H1 +0.0781 (5-0, p=0.0625), just short of this
+project's threshold; H64 is −0.0156 on both. Classic: <b>exactly 0.0000 at every
+horizon, 0 wins and 0 losses</b> — the two models solve the same starts, not merely
+the same number of them.</p>
+<p>So full ≥ classic holds directionally, and the control half of the
+pre-registration was confirmed. But against voxel's 49-0 (p&lt;1e-14) and
+Breakout's 22-0 (p&lt;1e-5), a best cell of +0.0781 at p=0.0625 is not the
+"substantial gain" that was predicted, and the gap between the two arms is itself
+unresolved. <b>Static share is weakly informative about the sign of the gain and
+uninformative about its size</b> — and size is the only thing that made this a
+pre-training decision procedure.</p>
 <p>The obvious replacement — "it helps when the plain model is below its identity
 floor" — fails too. Voxel is the only domain below its floor and it does have the
 largest gain, but Breakout gains +0.3438 with a comfortable margin, while Craftax
