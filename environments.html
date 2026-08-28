@@ -131,12 +131,17 @@ the second-order interaction a collision-counting metric misses.</p>
 <tr><td>voxel_miner</td><td>1843</td><td>0.1562</td><td>0.9436</td><td>0.7500</td><td>directed digging policy</td></tr>
 <tr><td>voxel_hunt</td><td>1843</td><td>0.1797</td><td>0.9087</td><td>—</td><td>moving mobs</td></tr>
 <tr><td>voxel_small</td><td>629</td><td>0.1289</td><td>0.9558</td><td>—</td><td>the field-count falsifier</td></tr>
-<tr><td><b>voxel_crowd8</b></td><td>1962</td><td>0.1758</td><td>0.9348</td><td>training</td><td>N=8, 93.1% of state shared, D_compose 0.0156</td></tr>
-<tr><td><b>voxel_crowd32</b></td><td>1906</td><td>0.2734</td><td>0.9263</td><td>training</td><td>N=32, 61.4% shared, <span class="bad">D_compose 0.2604</span></td></tr>
+<tr><td><b>voxel_crowd8</b></td><td>1962</td><td>0.1758</td><td>0.9348</td><td>training</td><td>N=8, 93.1% of state shared, D_compose 0.0039</td></tr>
+<tr><td><b>voxel_crowd32</b></td><td>1906</td><td>0.2734</td><td>0.9263</td><td>training</td><td>N=32, 61.4% shared, <span class="bad">D_compose 0.1055</span></td></tr>
 </table>
 <img class="chart" src="assets/f235_dcompose_scaling.png" alt="D_compose">
-<figcaption>At N=64 a record-wise model is right about 98.9% of agent records while
-being wrong about the shared world in 48.96% of ticks.</figcaption>
+<figcaption>At N=64 a record-wise model is right about 99.5% of agent records while
+being wrong about the shared world in 26.6% of ticks. <b>Corrected
+2026-08-28</b> — the first version of this curve, and the two table figures above,
+were measured under a BREAK-heavy policy the corpora were never generated with and
+read 2–3.5× too high. The withdrawn curve is drawn faintly in the chart. The shape,
+the zero below N=8 and the small interaction components all survive; the
+per-agent/shared ratio widens from 46× to 49×.</figcaption>
 
 <h2>3 · MinAtar — five games <span class="pill play">3 PLAYABLE</span></h2>
 <p>The flat tier, and the one where the ceiling argument is sharpest: the raw

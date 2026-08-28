@@ -190,18 +190,43 @@ each tick with only agent&nbsp;<i>i</i> acting, same exogenous draw, compare —
 gives a clean scaling law with an unexpected shape.</p>
 <img class="chart" src="assets/f235_dcompose_scaling.png" alt="D_compose scaling">
 <div class="box hero">
-<p>At N=64 a record-wise factorised model is right about <b>98.9% of agent
-records</b> while being wrong about the <b>shared world in 48.96% of ticks</b>.
-The two curves are 46× apart and still diverging. Report per-record exactness and
-the model looks healthy while getting the world wrong every other tick — which is
+<p>At N=64 a record-wise factorised model is right about <b>99.5% of agent
+records</b> while being wrong about the <b>shared world in 26.6% of ticks</b>.
+The two curves are 49× apart and still diverging. Report per-record exactness and
+the model looks healthy while getting the world wrong one tick in four — which is
 exactly why the shared layer needs its own metric.</p>
 </div>
-<p>The substrates differ in kind, not just degree. In CTF a contest damages the
-<em>contestants</em> (you get shot, you lose the race to a cell) and the per-player
-and shared errors are the same size. In VoxelWorld a contest damages the
-<em>world</em> (the terrain ends up different) and the contestants are barely
-touched. A per-record metric is therefore far more misleading on the 3-D substrate
-— a concrete reason to build it, not a stylistic preference.</p>
+<div class="box warn">
+<p><b>Correction, 2026-08-28.</b> This chart first went up with the voxel curve
+2–3.5× too high (N=64 read 48.96%), because I measured it under a BREAK-heavy
+action policy while the corpora were generated with a milder one — twice the rate
+of the only action that can contend. The withdrawn curve is drawn faintly above so
+the change is visible rather than silently swapped.</p>
+<p>What survives the correction is the part the claim rests on: still monotone and
+superlinear, still exactly zero below N=8, interaction components still small
+(max 4, so many independent pairwise contests rather than percolation), and the
+per-agent/shared ratio actually <em>widens</em> from 46× to 49×. What does not
+survive is the sentence "wrong every other tick".</p>
+<p class="dim">This is the same mistake catalogued two entries above, committed in
+the opposite direction — there a too-weak action source manufactured a clean
+0.0000 where the real effect was 0.0156. A composition-error measurement inherits
+the action distribution it was taken under, so it has to be measured under the same
+one it is quoted about.</p>
+</div>
+<p>The substrates differ in <em>kind</em>. In CTF a contest damages the
+<b>contestants</b> — you get shot, you lose the race to a cell — so per-player and
+shared errors are the same magnitude and move together. In VoxelWorld a contest
+damages the <b>world</b>: the terrain ends up different while the contestants are
+untouched, and the two errors are 49× apart. So on the 3-D substrate a per-record
+metric is <em>decoupled</em> from the shared-layer error; on the flat one it
+tracks it. That is the reason to build the view-changing tier.</p>
+<p class="dim">Stated as structure rather than as size, deliberately. An earlier
+version said the 3-D substrate was "far more misleading" and backed it with a
+2.8×/8.6× magnitude ratio. Once both sides were measured under their own corpus
+policy the ratios became 0.75× at N=8 and N=16 and 2.5× at N=32 — and the
+comparison was never sound anyway, since the two substrates differ in world size,
+density and action space, so "at the same N" is not a controlled comparison. Each
+substrate's own pair of curves is comparable; their levels are not.</p>
 <p class="dim">Also settled: whether the mean-field gap is <em>visible</em> depends
 on whether the tie-break is randomised, not on how much contention there is. CTF
 resolves contests through a random priority permutation, so the coupling lands in
