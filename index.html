@@ -383,24 +383,36 @@ in one thing: whether that geometry arrives <b>already resolved onto the image
 plane</b> as a per-pixel ray direction. Same parameters, same tokens, same data,
 same schedule.</p>
 <img class="chart" src="assets/f253_renderer_holdout_yaw.png" alt="renderer held-out yaw">
+<p>On <b>whole-frame</b> PSNR the two arms are indistinguishable — 20.832 dB vs
+20.864 dB on held-out yaws, 0.03 dB apart, curves crossing at all ten evaluation
+points — and both sit 5.9 dB below the do-nothing floor. We published that as a
+clean null. It was wrong, and the reason is worth more than the original result.</p>
+<img class="chart" src="assets/f255_renderer_masked.png" alt="whole-frame vs object pixels">
 <div class="box warn">
-<p><b>A clean null, and then a harder negative than the one we designed for.</b>
-The two arms are indistinguishable — <b>20.832 dB vs 20.864 dB</b> on held-out
-yaws, 0.03 dB apart, with the curves crossing repeatedly at all ten evaluation
-points. Handing the renderer the projection bought nothing; the pose-only arm
-derives whatever it needs.</p>
-<p>The floor is the real finding. <b>Neither arm comes close to it.</b> Simply
-rotating to the nearest <em>trained</em> yaw and rendering the true state scores
-26.70 dB — beating an 11.7M-parameter learned renderer by <b>5.9 dB</b>. Without
-that floor, "20.8 dB on unseen viewpoints" would have read as a result.</p>
-<p class="dim">Both arms <em>do</em> use the camera: pinning it costs 4.55 dB, and
-a camera-pinned model (16.28 dB) scores about the same as rendering a completely
-unrelated scene (16.01 dB). So the models are genuinely conditioned on the
-viewpoint — they just don't need the rays supplied, and they don't beat rotating
-to a view you already have. On a substrate where held-out yaws sit 45° from
-trained ones, that is a statement about when learning a renderer is worth it at
-all.</p>
+<p><b>Correction, same day.</b> Roughly 40–45% of every frame is sky — identical
+for both arms, all three floors and every model. Re-scoring the same checkpoints
+on the pixels the state actually determines separates them:</p>
+<p>The <b>view-generalisation penalty</b>, which is a within-arm comparison and so
+controls for overall model quality, goes from −1.43 / −1.44 dB (indistinguishable)
+to <b>−0.09 dB for the ray arm against −1.26 dB for embed</b>. The arm handed
+per-pixel rays generalises to unseen yaws essentially <em>for free</em>; the
+pose-only arm does not. That is the pre-registered prediction, in the predicted
+direction, and the whole-frame metric had compressed a 1.17 dB effect to 0.01 dB.</p>
+<p>The headline floor gap also largely dissolves: on object pixels the ray arm is
+<b>0.95 dB</b> below the do-nothing floor, not 5.87. "Rotating to a known view
+beats a learned renderer by 5.9 dB" was mostly a statement about sky.</p>
+<p class="dim">Two honest limits. One seed per arm, no error bars — treat the
+0.96 dB level difference as suggestive and the within-arm view gap as the stronger
+claim. And the premise that sent us looking was itself sloppy: it came from the
+gate's report that objects cover 0.297 of pixels, which is <em>one probe frame</em>;
+across the evaluation set it is 54–60%. Reasoning from a single frame to a dataset
+property is the same error catalogued three entries above.</p>
+<p><b>The general lesson:</b> on any substrate with a large constant background, a
+whole-frame image metric can hide a real effect completely. Define the metric on
+the pixels the state determines <em>before</em> running the arms, not after.</p>
 </div>
+<p class="dim">Both arms do use the camera: pinning it costs 4.55 dB whole-frame,
+and a camera-pinned model scores about what an unrelated scene does.</p>
 
 <h3>9. C1 finally has a trained model on the view-changing substrate</h3>
 <p>Everything above on the 3-D tier was either single-agent or model-free, because
